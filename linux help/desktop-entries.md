@@ -5,11 +5,11 @@
 ```
 [Desktop Entry]  
 Version=1.0
-Name=Unipro UGENE
-Comment=Unipro UGENE is a cross-platform visual environment for DNA and protein sequence analysis.
-Exec=/home/samuel/ugene-1.11.5/ugene -ui
-Path=/home/samuel/ugene-1.11.5/
-Icon=/usr/share/icons/Humanity/apps/32/access.svg
+Name=Jawg Storage
+Comment=Jawg Storage is an awesome back-end client that manages different geolocalized entities.
+Exec=/home/jawg/storage/bin/storage.sh
+Path=/home/jawg/storage
+Icon=/usr/share/icons/jawgIcon.svg
 Terminal=false
 Type=Application
 Categories=Utility;Application;Development;
