@@ -1,0 +1,20 @@
+"*":
+  core:
+    disabledPackages: [
+      "markdown-preview"
+      "emmet"
+    ]
+  editor:
+    fontSize: 15
+    scrollPastEnd: true
+    showIndentGuide: true
+  "exception-reporting":
+   userId: "32e24163-20b2-89ef-3c91-1eb595987527"
+  "markdown-preview-plus":
+    useGitHubStyle: true
+  pigments:
+    markerType: "dot"
+  "tree-view":
+    hideIgnoredNames: true
+  welcome:
+   showOnStartup: false
