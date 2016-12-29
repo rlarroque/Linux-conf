@@ -1,0 +1,278 @@
+#!/bin/bash
+#    Copyright (C) 2015-2016 Joxit
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation, either version 3 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+set -e
+function usage {
+  echo "docker-clean [OPTIONS] COMMAND
+    COMMAND :
+        images       Delete a danglings images or a list of images and \
+optionally their containers too.
+        containers   Delete all containers for a list of images.
+        repositories Delete all images from a repository.
+    OPTIONS:
+        -h, --help
+            Display a help message, and exit.
+        -v, --version
+            Display version information, and exit."
+  exit 0
+}
+function usage_images {
+  echo "docker-clean images [OPTIONS] [IMAGE_NAMES[:TAG]...]
+    Delete all dangling (<none>) images if no repositories provided.
+    Delete all images named IMAGE_NAME and their tags or only an image \
+with its tag (name and tag must match and regex can be used). \
+You can use a list of images.
+    OPTIONS :
+        -f, --force
+            Append -f in docker options for image removing and container \
+if -r is used.
+        -r, --recursive
+            When deleting image, remove also their containers
+        -h, --help
+            Display a help message, and exit."
+  exit 0
+}
+function usage_containers {
+  echo "docker-clean containers [OPTIONS] [IMAGE_NAMES[:TAG]...]
+    Delete all containers for a list of images.
+    OPTIONS :
+        -f, --force
+            Append -f in docker options for container removing.
+        -v, --volumes
+            Append -v in docker options for container removing.
+        -h, --help
+            Display a help message, and exit."
+  exit 0
+}
+
+function usage_repositories {
+  echo "docker-clean repositories [OPTIONS] [REPOSITORY...]
+    Delete all images from a repository e.g it will delete joxit/node \
+joxit/node:carto and joxit/kosmtik if you execute docker-clean repositories \
+joxit
+    OPTIONS :
+        -f, --force
+            Append -f in docker options for image removing.
+        -h, --help
+            Display a help message, and exit."
+  exit 0
+}
+function show_version {
+  echo "$0  Copyright (C) 2015-2016 Joxit"
+  echo "This program comes with ABSOLUTELY NO WARRANTY."
+  echo "This is free software, and you are welcome to redistribute it"
+  echo "under certain condition."
+  exit 0
+}
+
+function get_containers() {
+  if [ "$1" = "" ]; then
+    return 0
+  fi
+  IMAGES_DISJUNCTION=`echo ${@} | sed "s/ /|/g"`
+  echo "$(docker ps -a | sed 's/  */ /g')" \
+    | while read line; do
+    if [ $(echo $line \
+              | cut -d' ' -f 2 \
+              | grep -E ${IMAGES_DISJUNCTION}) ]; then
+      echo "$(echo $line | cut -d' ' -f 1)"
+    elif [ $(echo $line \
+                | cut -d' ' -f 2 \
+                | sed 's/$/:latest/' \
+                | grep -E ${IMAGES_DISJUNCTION}) ]; then
+      echo "$(echo $line | cut -d' ' -f 1)"
+    fi
+  done
+  return 0
+}
+
+function get_options() {
+  RES=""
+  for arg in "$@"; do
+    case "$arg" in
+      -*)
+        RES="$RES $arg"
+        ;;
+      *)
+        break
+        ;;
+    esac
+  done
+  echo "$RES"
+}
+
+function get_args() {
+  for arg in "$@"; do
+    case "$arg" in
+      -*)
+      ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+  done
+  echo "$@"
+}
+
+case "$1" in
+  images)
+    shift
+    OPTS="$(get_options $@)"
+    IMAGES="$(get_args $@)"
+    for opt in $OPTS; do
+      case "$opt" in
+        -f|--force)
+          opt_force=" -f "
+          ;;
+        -r|--recursive)
+          opt_recursive=true
+          ;;
+        -h|--help)
+          usage_images
+          ;;
+      esac
+    done
+
+    if [ -z "$IMAGES" ]; then
+      echo "Will delete none images"
+      IMAGES=$(docker images \
+                  | sed 's/  */ /g' \
+                  | grep "^<none> " \
+                  | cut -d' ' -f 3 \
+                  | sort \
+                  | uniq)
+    else
+      TMP=""
+      for image in $IMAGES; do
+        IMAGE_NAME="${image%%:*}"
+        # Check if $image contains :
+        if [ "${image##*:*}" ]; then
+          IMAGE_TAG="*"
+        else
+          IMAGE_TAG="${image#*:}"
+        fi
+        TMP="$TMP $(docker images \
+                  | sed 's/  */ /g' \
+                  | grep "^$IMAGE_NAME $IMAGE_TAG " \
+                  | cut -d' ' -f 1-2 --output-delimiter=':' \
+                  | sort \
+                  | uniq)"
+      done
+      IMAGES=$TMP
+    fi
+    if [ -z "${IMAGES// }" ]; then
+      echo "There are no images to delete"
+    fi
+    for image in $IMAGES; do
+      delete=true
+      CONTAINERS=`get_containers $image $(docker images -q $image)`
+      if [ -n "${CONTAINERS}" ]; then
+        if [ $opt_recursive ]; then
+          echo "Deleting associated containers of $image first"
+          docker rm ${opt_force} ${CONTAINERS}
+        else
+          echo "I can't delete $image, delete containers first or use \
+-r option : ${CONTAINERS}"
+          delete=false
+        fi
+      fi
+      if [ $delete = true ]; then
+        echo "Deleting ${image} images (all tags)"
+        docker rmi ${opt_force} ${image}
+      fi
+    done
+    ;;
+  containers)
+    shift
+    OPTS="$(get_options $@)"
+    IMAGES="$(get_args $@)"
+    for opt in $OPTS; do
+      case "$opt" in
+        -f|--force)
+          opt_force=" -f "
+          ;;
+        -h|--help)
+          usage_containers
+          ;;
+        -v|--volumes)
+          opt_volumes=" -v "
+          ;;
+      esac
+    done
+    if [ -z "${IMAGES// }" ]; then
+      usage_containers
+    fi
+    for image in $IMAGES; do
+      IMAGE_NAME="${image%%:*}"
+      # Check if $image contains :
+      if [ "${image##*:*}" ]; then
+        IMAGE_TAG="latest"
+      else
+        IMAGE_TAG="${image#*:}"
+      fi
+      CONTAINERS=`get_containers "$IMAGE_NAME:$IMAGE_TAG"`
+      if [ "$CONTAINERS" ]; then
+        echo "Deleting containers of $IMAGE_NAME:$IMAGE_TAG"
+        docker rm ${opt_force} ${opt_volumes} ${CONTAINERS}
+      else
+        echo "There are no containers to delete for $IMAGE_NAME:$IMAGE_TAG"
+      fi
+    done
+    ;;
+  repositories)
+    shift
+    OPTS="$(get_options $@)"
+    REPOS="$(get_args $@)"
+    for opt in $OPTS; do
+      case "$opt" in
+        -f|--force)
+          opt_force=" -f "
+          ;;
+        -h|--help)
+          usage_repositories
+          ;;
+      esac
+    done
+
+    if [ -z "${REPOS// }" ]; then
+      usage_repositories
+    fi
+    for repo in $REPOS; do
+      IMAGES=$(docker images \
+                  | sed 's/  */ /g' \
+                  | grep "^$repo\/[^ ]* " \
+                  | cut -d' ' -f 1-2 --output-delimiter=':')
+      if [ "${IMAGES}" ]; then
+        echo "Deleting all images from $repo/"
+        docker rmi ${opt_force} ${IMAGES}
+      else
+        echo "There are no images to delete for $repo/"
+      fi
+    done
+    ;;
+  -v|--verion)
+    show_version
+    ;;
+  -h|--help|'')
+    usage
+    ;;
+  *)
+    echo "Wrong command."
+    usage
+    ;;
+esac
