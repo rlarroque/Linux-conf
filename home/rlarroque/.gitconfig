@@ -1,0 +1,20 @@
+[user]
+        email = rom.larroque@gmail.com
+        name = rlarroque
+
+[alias]
+        tree = log --graph --decorate --pretty=oneline --abbrev-commit --all --date-order
+        st = status
+        co = checkout
+
+[color]
+        branch = auto
+        diff = auto
+        interactive = auto
+        status = auto
+
+[push]
+        default = simple
+
+[merge]
+        tool = meld
