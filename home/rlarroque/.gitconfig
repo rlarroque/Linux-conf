@@ -3,9 +3,10 @@
         name = rlarroque
 
 [alias]
-        tree = log --graph --decorate --pretty=oneline --abbrev-commit --all --date-order
+        tree = log --graph --decorate --pretty=oneline --abbrev-commit --all
         st = status
         co = checkout
+        undo = reset --soft HEAD^
 
 [color]
         branch = auto
