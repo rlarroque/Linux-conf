@@ -11,6 +11,7 @@ All extensions can be found here : https://extensions.gnome.org/.
 * https://extensions.gnome.org/extension/36/lock-keys/ Keys status.
 * https://extensions.gnome.org/extension/118/no-topleft-hot-corner/ Disable top left annoying hot corners.
 * https://extensions.gnome.org/extension/750/openweather/ Weather extension.
+* https://extensions.gnome.org/extension/1104/section-todo-list/ Todo list.
 * https://extensions.gnome.org/extension/701/top-panel-workspace-scroll/ Switch worspace by scrolling top bar.
 * https://extensions.gnome.org/extension/1031/topicons/ Moves legacy tray icons to the top panel.
 * https://extensions.gnome.org/extension/21/workspace-indicator/ Displays workspace number in the top bar.
